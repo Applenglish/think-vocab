@@ -2,45 +2,79 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Think Level 0 v5 Teaching Platform</title>
+<title>Think Level 0 v5.1 APP Edition</title>
 
 <style>
 body{
 font-family: Arial;
-background:#f2f2f2;
+background:#eef0f3;
+margin:0;
 text-align:center;
 }
 
+/* 容器升级为App卡片风格 */
 .container{
-max-width:850px;
-margin:auto;
+max-width:600px;
+margin:20px auto;
 background:white;
 padding:20px;
-margin-top:20px;
-border-radius:12px;
+border-radius:20px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
 }
 
+/* 学生栏 */
+input{
+padding:10px;
+font-size:16px;
+border-radius:10px;
+border:1px solid #ccc;
+}
+
+/* 卡片APP风格 */
+.card{
+font-size:34px;
+padding:70px 20px;
+margin:20px 0;
+background:linear-gradient(135deg,#fafafa,#e9e9e9);
+border-radius:25px;
+cursor:pointer;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+transition:0.2s;
+user-select:none;
+}
+
+.card:active{
+transform:scale(0.98);
+}
+
+/* 按钮 */
 button{
 padding:8px 12px;
 margin:5px;
-border-radius:8px;
+border-radius:10px;
 border:1px solid #ccc;
 background:#fff;
 cursor:pointer;
 }
 
-.card{
-font-size:26px;
-padding:40px;
-margin:20px;
-background:#f8f8f8;
-border-radius:12px;
-cursor:pointer;
+/* 底部控制栏 */
+.bottom-bar{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+background:white;
+padding:10px;
+border-top:1px solid #ddd;
+display:flex;
+justify-content:center;
+gap:10px;
 }
 
-input{
-padding:8px;
-margin:5px;
+.bottom-bar button{
+font-size:18px;
+width:60px;
+height:40px;
 }
 </style>
 </head>
@@ -49,13 +83,13 @@ margin:5px;
 
 <div class="container">
 
-<h2>Think Level 0 v5 Platform</h2>
+<h2>Think Level 0 v5.1</h2>
 
 <!-- 学生系统 -->
 <div>
 学生：
 <input id="stu" placeholder="Student1">
-<button onclick="setStudent()">切换学生</button>
+<button onclick="setStudent()">切换</button>
 </div>
 
 <hr>
@@ -65,21 +99,23 @@ margin:5px;
 <hr>
 
 <div>
-<button onclick="showStats()">📊 教师统计</button>
-<button onclick="showWrong()">❌ 错题本</button>
+<button onclick="showStats()">📊统计</button>
+<button onclick="showWrong()">❌错题</button>
 </div>
-
-<hr>
 
 <div id="app"></div>
 
 </div>
 
+<!-- 底部APP控制栏 -->
+<div class="bottom-bar">
+<button onclick="speak(currentWord.word)">🔊</button>
+<button onclick="nextCard()">⏭</button>
+<button onclick="showWrong()">❌</button>
+</div>
+
 <script>
 
-// =====================
-// 学生系统
-// =====================
 let student = localStorage.getItem("student") || "Student1";
 
 // =====================
@@ -101,8 +137,7 @@ Unit10:[],Unit11:[],Unit12:[]
 };
 
 // =====================
-// 数据存储（按学生）
-// =====================
+// 数据（按学生）
 function getDB(){
 let db = localStorage.getItem("vocab_v5_"+student);
 return db?JSON.parse(db):{};
@@ -134,8 +169,7 @@ saveDB(db);
 }
 
 // =====================
-// SRS 取词
-// =====================
+// SRS
 function getDue(unit){
 let db=getDB();
 let list=[];
@@ -155,26 +189,22 @@ return list;
 
 // =====================
 // 状态
-// =====================
 let currentUnit="Welcome";
 let currentWord=null;
-let showBack=false;
 let wrong=[];
 
 // =====================
 // 学生切换
-// =====================
 function setStudent(){
 student=document.getElementById("stu").value;
 localStorage.setItem("student",student);
-alert("当前学生："+student);
 initDB();
 nextCard();
+alert("当前学生："+student);
 }
 
 // =====================
 // 菜单
-// =====================
 function renderMenu(){
 let html="";
 for(let u in data){
@@ -189,50 +219,38 @@ nextCard();
 }
 
 // =====================
-// 发音（Azure已接入则保留你v4的函数）
-// =====================
+// 发音
 function speak(word){
 let u=new SpeechSynthesisUtterance(word);
 u.lang="en-US";
+u.rate=0.9;
 speechSynthesis.speak(u);
 }
 
 // =====================
 // 卡片
-// =====================
 function nextCard(){
 
 let list=getDue(currentUnit);
 currentWord=list[Math.floor(Math.random()*list.length)];
-showBack=false;
 
 document.getElementById("app").innerHTML=`
 <div class="card" onclick="flip()">
 ${currentWord.word}
 </div>
 
-<button onclick="speak('${currentWord.word}')">🔊 发音</button>
-
-<br><br>
-
 <input id="inp" placeholder="输入英文或中文">
 <button onclick="check()">提交</button>
-
-<br><br>
-
-<button onclick="nextCard()">下一张</button>
 `;
 }
 
 function flip(){
-showBack=!showBack;
 document.querySelector(".card").innerHTML=
-showBack?currentWord.meaning:currentWord.word;
+currentWord.meaning;
 }
 
 // =====================
-// 更新记忆
-// =====================
+// 记忆更新
 function updateMemory(ok){
 let db=getDB();
 let key=currentUnit+"_"+currentWord.word;
@@ -253,7 +271,6 @@ saveDB(db);
 
 // =====================
 // 判断
-// =====================
 function check(){
 let v=document.getElementById("inp").value.trim();
 
@@ -269,8 +286,7 @@ nextCard();
 }
 
 // =====================
-// 错题本
-// =====================
+// 错题
 function showWrong(){
 let html="<h3>错题本</h3>";
 wrong.forEach(w=>{
@@ -280,8 +296,7 @@ document.getElementById("app").innerHTML=html;
 }
 
 // =====================
-// 教师统计
-// =====================
+// 统计
 function showStats(){
 let db=getDB();
 let total=0, mastered=0;
@@ -292,15 +307,14 @@ if(db[k].level>=2) mastered++;
 }
 
 document.getElementById("app").innerHTML=`
-<h3>学习统计（${student}）</h3>
+<h3>${student} 学习统计</h3>
 <p>总词汇：${total}</p>
-<p>已掌握：${mastered}</p>
+<p>掌握：${mastered}</p>
 `;
 }
 
 // =====================
 // 初始化
-// =====================
 initDB();
 renderMenu();
 nextCard();
