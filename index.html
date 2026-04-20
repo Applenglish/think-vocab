@@ -2,38 +2,44 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Think Level 0 Vocabulary Practice</title>
+<title>Think Level 0 Vocabulary System</title>
 
 <style>
-
 body{
 font-family: Arial;
 text-align:center;
-background:#f5f5f5;
+background:#f2f2f2;
 }
 
 .container{
-width:500px;
+width:90%;
+max-width:600px;
 margin:auto;
 background:white;
 padding:20px;
+margin-top:30px;
 border-radius:10px;
-margin-top:40px;
 }
 
 button{
-padding:10px 20px;
-margin:10px;
-font-size:16px;
+padding:10px 15px;
+margin:5px;
+font-size:14px;
+cursor:pointer;
+}
+
+.word-btn{
+display:block;
+width:100%;
+margin:5px 0;
 }
 
 input{
 padding:10px;
+width:80%;
 font-size:16px;
 }
-
 </style>
-
 </head>
 
 <body>
@@ -42,58 +48,141 @@ font-size:16px;
 
 <h2>Think Level 0 Vocabulary</h2>
 
-<p id="question">点击开始</p>
+<div id="menu"></div>
 
-<input id="answer" placeholder="输入答案">
+<hr>
 
-<br><br>
-
-<button onclick="check()">提交</button>
-
-<button onclick="next()">下一题</button>
-
-<p id="result"></p>
+<div id="app"></div>
 
 </div>
 
 <script>
 
-let vocab=[
-{cn:"苹果",en:"apple"},
-{cn:"猫",en:"cat"},
-{cn:"狗",en:"dog"},
-{cn:"书",en:"book"}
-]
+// =====================
+// 词库（你以后只改这里）
+// =====================
 
-let current
+const data = {
 
-function next(){
+Welcome:[
+["black","黑色"],["blue","蓝色"],["red","红色"],["green","绿色"],
+["morning","早上"],["afternoon","下午"],["night","夜晚"],
+["book","书"],["pen","钢笔"],["chair","椅子"]
+],
 
-current=vocab[Math.floor(Math.random()*vocab.length)]
+Unit1:[
+["Brazil","巴西"],["Japan","日本"],["China","中国"],
+["teacher","老师"],["student","学生"],
+["who","谁"],["what","什么"],["why","为什么"],
+["mountain","山"],["sea","海"]
+],
 
-document.getElementById("question").innerText=current.cn
+Unit2:[],
+Unit3:[],
+Unit4:[]
+};
 
-document.getElementById("answer").value=""
+// =====================
 
-document.getElementById("result").innerText=""
+let currentUnit="Welcome";
+let currentWord=[];
+let mistakes=[];
 
+// 发音
+function speak(word){
+let u=new SpeechSynthesisUtterance(word);
+speechSynthesis.speak(u);
 }
 
+// 单元菜单
+function renderMenu(){
+
+let html="";
+
+for(let unit in data){
+html+=`
+<button onclick="openUnit('${unit}')">${unit}</button>
+`;
+}
+
+document.getElementById("menu").innerHTML=html;
+}
+
+// 打开单元
+function openUnit(unit){
+currentUnit=unit;
+nextQuestion();
+}
+
+// 下一题
+function nextQuestion(){
+
+let list=data[currentUnit];
+
+if(list.length==0){
+document.getElementById("app").innerHTML="<h3>该单元暂未开放</h3>";
+return;
+}
+
+currentWord=list[Math.floor(Math.random()*list.length)];
+
+let html=`
+
+<h3>${currentWord[1]}</h3>
+
+<input id="input" placeholder="输入英文">
+
+<br><br>
+
+<button onclick="check()">提交</button>
+<button onclick="nextQuestion()">下一题</button>
+<button onclick="speak('${currentWord[0]}')">🔊 发音</button>
+
+<p id="result"></p>
+
+<hr>
+
+<button onclick="showMistakes()">错题本</button>
+
+`;
+
+document.getElementById("app").innerHTML=html;
+}
+
+// 检查答案
 function check(){
 
-let a=document.getElementById("answer").value
+let val=document.getElementById("input").value.trim();
 
-if(a==current.en){
-document.getElementById("result").innerText="正确！"
+if(val.toLowerCase()==currentWord[0].toLowerCase()){
+document.getElementById("result").innerHTML="✔ 正确";
+}else{
+document.getElementById("result").innerHTML="❌ 正确答案："+currentWord[0];
+mistakes.push(currentWord);
 }
-else{
-document.getElementById("result").innerText="正确答案："+current.en
 }
 
+// 错题本
+function showMistakes(){
+
+let html="<h3>错题本</h3>";
+
+if(mistakes.length==0){
+html+="暂无错题";
+}else{
+mistakes.forEach(m=>{
+html+=m[0]+" - "+m[1]+"<br>";
+});
 }
+
+document.getElementById("app").innerHTML=html;
+}
+
+// 初始化
+renderMenu();
+nextQuestion();
 
 </script>
 
 </body>
-
 </html>
