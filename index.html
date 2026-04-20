@@ -2,40 +2,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Think Level 0 Vocabulary System</title>
+<title>Think Level 0 Smart Vocabulary System v2.0</title>
 
 <style>
 body{
 font-family: Arial;
-text-align:center;
 background:#f2f2f2;
+text-align:center;
 }
 
 .container{
-width:90%;
-max-width:650px;
+max-width:750px;
 margin:auto;
 background:white;
 padding:20px;
-margin-top:30px;
-border-radius:10px;
+margin-top:20px;
+border-radius:12px;
 }
 
 button{
-padding:10px 12px;
+padding:8px 12px;
 margin:5px;
-font-size:14px;
+border-radius:8px;
 cursor:pointer;
 border:1px solid #ccc;
 background:#fff;
-border-radius:6px;
 }
 
-input{
-padding:10px;
-width:80%;
-font-size:16px;
-margin-top:10px;
+.card{
+font-size:26px;
+padding:40px;
+margin:20px;
+background:#f8f8f8;
+border-radius:12px;
+cursor:pointer;
+}
+
+.small{
+font-size:14px;
+color:#666;
 }
 </style>
 </head>
@@ -44,11 +49,13 @@ margin-top:10px;
 
 <div class="container">
 
-<h2>Think Level 0 Vocabulary</h2>
+<h2>Think Level 0 Vocabulary v2.0</h2>
 
 <div id="menu"></div>
 
 <hr>
+
+<div id="mode"></div>
 
 <div id="app"></div>
 
@@ -56,128 +63,199 @@ margin-top:10px;
 
 <script>
 
+// =====================
+// 词库
+// =====================
 const data = {
 
 Welcome:[
 ["black","黑色"],["blue","蓝色"],["red","红色"],["green","绿色"],
-["morning","早上"],["afternoon","下午"],["evening","傍晚"],["night","夜晚"],
-["book","书"],["pen","钢笔"],["chair","椅子"]
+["morning","早上"],["afternoon","下午"],["night","夜晚"],
+["book","书"],["pen","钢笔"]
 ],
 
 Unit1:[
 ["Brazil","巴西"],["Japan","日本"],["China","中国"],
 ["teacher","老师"],["student","学生"],
-["who","谁"],["what","什么"],["why","为什么"],
+["who","谁"],["what","什么"],
 ["mountain","山"],["sea","海"]
 ],
 
-Unit2:[],
-Unit3:[],
-Unit4:[],
-Unit5:[],
-Unit6:[],
-Unit7:[],
-Unit8:[],
-Unit9:[],
-Unit10:[],
-Unit11:[],
-Unit12:[]
+Unit2:[],Unit3:[],Unit4:[],Unit5:[],
+Unit6:[],Unit7:[],Unit8:[],Unit9:[],
+Unit10:[],Unit11:[],Unit12:[]
 };
 
+// =====================
+// 状态
+// =====================
 let currentUnit="Welcome";
-let currentWord=[];
-let mistakes=[];
+let mode="flashcard";
+let index=0;
+let wrong=[];
+let correct=0;
+let total=0;
+let records=[];
 
+// =====================
+// 初始化
+// =====================
+function init(){
+renderMenu();
+renderMode();
+loadCard();
+}
+
+// =====================
+// 菜单
+// =====================
+function renderMenu(){
+let html="";
+for(let u in data){
+html+=`<button onclick="switchUnit('${u}')">${u}</button>`;
+}
+document.getElementById("menu").innerHTML=html;
+}
+
+// =====================
+function renderMode(){
+document.getElementById("mode").innerHTML=`
+<button onclick="setMode('flashcard')">卡片模式</button>
+<button onclick="setMode('en2cn')">英→中</button>
+<button onclick="setMode('cn2en')">中→英</button>
+<button onclick="setMode('test')">测试模式</button>
+`;
+}
+
+function setMode(m){
+mode=m;
+index=0;
+correct=0;
+total=0;
+loadCard();
+}
+
+// =====================
+function switchUnit(u){
+currentUnit=u;
+index=0;
+correct=0;
+total=0;
+loadCard();
+}
+
+// =====================
 // 发音
+// =====================
 function speak(word){
 let u=new SpeechSynthesisUtterance(word);
 u.lang="en-US";
 speechSynthesis.speak(u);
 }
 
-// 渲染菜单
-function renderMenu(){
-
-let html="";
-
-for(let unit in data){
-html+=`<button onclick="openUnit('${unit}')">${unit}</button>`;
-}
-
-document.getElementById("menu").innerHTML=html;
-}
-
-// 打开单元
-function openUnit(unit){
-currentUnit=unit;
-nextQuestion();
-}
-
-// 出题
-function nextQuestion(){
+// =====================
+// 卡片模式
+// =====================
+function loadCard(){
 
 let list=data[currentUnit];
 
 if(!list || list.length===0){
-document.getElementById("app").innerHTML="<h3>该单元暂未开放</h3>";
+document.getElementById("app").innerHTML="<h3>该单元未开放</h3>";
 return;
 }
 
-currentWord=list[Math.floor(Math.random()*list.length)];
+let word=list[index % list.length];
 
-let html=`
-<h3>${currentWord[1]}</h3>
-
-<input id="input" placeholder="输入英文">
-
-<br><br>
-
-<button onclick="check()">提交</button>
-<button onclick="nextQuestion()">下一题</button>
-<button onclick="speak('${currentWord[0]}')">🔊 发音</button>
-
-<p id="result"></p>
-
-<hr>
-
-<button onclick="showMistakes()">错题本</button>
+if(mode==="flashcard"){
+document.getElementById("app").innerHTML=`
+<div class="card" onclick="flip('${word[0]}','${word[1]}')">
+点击翻转
+</div>
+<p class="small">Unit: ${currentUnit}</p>
 `;
 
-document.getElementById("app").innerHTML=html;
+window.currentWord=word;
 }
 
-// 检查答案
-function check(){
+else if(mode==="cn2en"){
+document.getElementById("app").innerHTML=`
+<h3>${word[1]}</h3>
+<input id="inp">
+<button onclick="check('${word[0]}')">提交</button>
+<button onclick="speak('${word[0]}')">🔊</button>
+`;
+window.currentWord=word;
+}
 
-let val=document.getElementById("input").value.trim();
+else if(mode==="en2cn"){
+document.getElementById("app").innerHTML=`
+<h3>${word[0]}</h3>
+<input id="inp">
+<button onclick="check('${word[1]}')">提交</button>
+`;
+window.currentWord=word;
+}
 
-if(val.toLowerCase()===currentWord[0].toLowerCase()){
-document.getElementById("result").innerHTML="✔ 正确";
+else if(mode==="test"){
+document.getElementById("app").innerHTML=`
+<h3>${word[1]}</h3>
+<input id="inp">
+<button onclick="testCheck('${word[0]}')">提交</button>
+`;
+window.currentWord=word;
+}
+}
+
+// =====================
+function flip(en,cn){
+document.querySelector(".card").innerHTML=
+en+"<br>"+cn;
+speak(en);
+}
+
+// =====================
+function check(ans){
+let v=document.getElementById("inp").value;
+total++;
+if(v.toLowerCase()===ans.toLowerCase()){
+correct++;
 }else{
-document.getElementById("result").innerHTML="❌ 正确答案："+currentWord[0];
-mistakes.push(currentWord);
+wrong.push(window.currentWord);
 }
+index++;
+loadCard();
 }
 
+// =====================
+function testCheck(ans){
+let v=document.getElementById("inp").value;
+total++;
+if(v.toLowerCase()===ans.toLowerCase()){
+correct++;
+}else{
+wrong.push(window.currentWord);
+}
+records.push({unit:currentUnit,mode:mode});
+index++;
+loadCard();
+}
+
+// =====================
 // 错题本
-function showMistakes(){
-
+// =====================
+function showWrong(){
 let html="<h3>错题本</h3>";
-
-if(mistakes.length===0){
-html+="暂无错题";
-}else{
-mistakes.forEach(m=>{
-html+=m[0]+" - "+m[1]+"<br>";
+wrong.forEach(w=>{
+html+=w[0]+" - "+w[1]+"<br>";
 });
-}
-
 document.getElementById("app").innerHTML=html;
 }
 
+// =====================
 // 初始化
-renderMenu();
-nextQuestion();
+// =====================
+init();
 
 </script>
 
