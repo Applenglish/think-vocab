@@ -13,7 +13,7 @@ background:#f2f2f2;
 
 .container{
 width:90%;
-max-width:600px;
+max-width:650px;
 margin:auto;
 background:white;
 padding:20px;
@@ -22,22 +22,20 @@ border-radius:10px;
 }
 
 button{
-padding:10px 15px;
+padding:10px 12px;
 margin:5px;
 font-size:14px;
 cursor:pointer;
-}
-
-.word-btn{
-display:block;
-width:100%;
-margin:5px 0;
+border:1px solid #ccc;
+background:#fff;
+border-radius:6px;
 }
 
 input{
 padding:10px;
 width:80%;
 font-size:16px;
+margin-top:10px;
 }
 </style>
 </head>
@@ -58,12 +56,6 @@ font-size:16px;
 
 <script>
 
-// =====================
-// 词库（你以后只改这里）
-// =====================
-
-const data = {
-
 const data = {
 
 Welcome:[
@@ -79,18 +71,9 @@ Unit1:[
 ["mountain","山"],["sea","海"]
 ],
 
-Unit2:[
-["add","这里开始填Unit2单词"],
-],
-
-Unit3:[
-["add","这里开始填Unit3单词"],
-],
-
-Unit4:[
-["add","这里开始填Unit4单词"],
-],
-
+Unit2:[],
+Unit3:[],
+Unit4:[],
 Unit5:[],
 Unit6:[],
 Unit7:[],
@@ -101,8 +84,6 @@ Unit11:[],
 Unit12:[]
 };
 
-// =====================
-
 let currentUnit="Welcome";
 let currentWord=[];
 let mistakes=[];
@@ -110,18 +91,17 @@ let mistakes=[];
 // 发音
 function speak(word){
 let u=new SpeechSynthesisUtterance(word);
+u.lang="en-US";
 speechSynthesis.speak(u);
 }
 
-// 单元菜单
+// 渲染菜单
 function renderMenu(){
 
 let html="";
 
 for(let unit in data){
-html+=`
-<button onclick="openUnit('${unit}')">${unit}</button>
-`;
+html+=`<button onclick="openUnit('${unit}')">${unit}</button>`;
 }
 
 document.getElementById("menu").innerHTML=html;
@@ -133,12 +113,12 @@ currentUnit=unit;
 nextQuestion();
 }
 
-// 下一题
+// 出题
 function nextQuestion(){
 
 let list=data[currentUnit];
 
-if(list.length==0){
+if(!list || list.length===0){
 document.getElementById("app").innerHTML="<h3>该单元暂未开放</h3>";
 return;
 }
@@ -146,7 +126,6 @@ return;
 currentWord=list[Math.floor(Math.random()*list.length)];
 
 let html=`
-
 <h3>${currentWord[1]}</h3>
 
 <input id="input" placeholder="输入英文">
@@ -162,7 +141,6 @@ let html=`
 <hr>
 
 <button onclick="showMistakes()">错题本</button>
-
 `;
 
 document.getElementById("app").innerHTML=html;
@@ -173,7 +151,7 @@ function check(){
 
 let val=document.getElementById("input").value.trim();
 
-if(val.toLowerCase()==currentWord[0].toLowerCase()){
+if(val.toLowerCase()===currentWord[0].toLowerCase()){
 document.getElementById("result").innerHTML="✔ 正确";
 }else{
 document.getElementById("result").innerHTML="❌ 正确答案："+currentWord[0];
@@ -186,7 +164,7 @@ function showMistakes(){
 
 let html="<h3>错题本</h3>";
 
-if(mistakes.length==0){
+if(mistakes.length===0){
 html+="暂无错题";
 }else{
 mistakes.forEach(m=>{
