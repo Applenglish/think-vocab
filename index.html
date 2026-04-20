@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Think Level 0 v3.0 Memory System</title>
+<title>Think Level 0 v5 Teaching Platform</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ text-align:center;
 }
 
 .container{
-max-width:800px;
+max-width:850px;
 margin:auto;
 background:white;
 padding:20px;
@@ -30,19 +30,17 @@ cursor:pointer;
 }
 
 .card{
-font-size:28px;
-padding:50px;
+font-size:26px;
+padding:40px;
 margin:20px;
 background:#f8f8f8;
 border-radius:12px;
 cursor:pointer;
-user-select:none;
 }
 
 input{
-padding:10px;
-width:70%;
-font-size:16px;
+padding:8px;
+margin:5px;
 }
 </style>
 </head>
@@ -51,9 +49,26 @@ font-size:16px;
 
 <div class="container">
 
-<h2>Think Level 0 v3.0 Memory System</h2>
+<h2>Think Level 0 v5 Platform</h2>
+
+<!-- 学生系统 -->
+<div>
+学生：
+<input id="stu" placeholder="Student1">
+<button onclick="setStudent()">切换学生</button>
+</div>
+
+<hr>
 
 <div id="menu"></div>
+
+<hr>
+
+<div>
+<button onclick="showStats()">📊 教师统计</button>
+<button onclick="showWrong()">❌ 错题本</button>
+</div>
+
 <hr>
 
 <div id="app"></div>
@@ -63,11 +78,16 @@ font-size:16px;
 <script>
 
 // =====================
+// 学生系统
+// =====================
+let student = localStorage.getItem("student") || "Student1";
+
+// =====================
 // 词库
 // =====================
 const data = {
 Welcome:[
-["black","黑色"],["blue","蓝色"],["red","红色"],["green","绿色"],
+["black","黑色"],["blue","蓝色"],["red","红色"],
 ["morning","早上"],["book","书"],["pen","钢笔"]
 ],
 Unit1:[
@@ -81,25 +101,24 @@ Unit10:[],Unit11:[],Unit12:[]
 };
 
 // =====================
-// SRS 记忆系统（简化版）
+// 数据存储（按学生）
 // =====================
-
 function getDB(){
-let db=localStorage.getItem("vocab_v3");
+let db = localStorage.getItem("vocab_v5_"+student);
 return db?JSON.parse(db):{};
 }
 
 function saveDB(db){
-localStorage.setItem("vocab_v3",JSON.stringify(db));
+localStorage.setItem("vocab_v5_"+student,JSON.stringify(db));
 }
 
-// 初始化单词
+// 初始化
 function initDB(){
 let db=getDB();
 
-for(let unit in data){
-data[unit].forEach(w=>{
-let key=unit+"_"+w[0];
+for(let u in data){
+data[u].forEach(w=>{
+let key=u+"_"+w[0];
 if(!db[key]){
 db[key]={
 word:w[0],
@@ -114,8 +133,10 @@ next:Date.now()
 saveDB(db);
 }
 
-// 获取可学习单词（间隔复习）
-function getDueWords(unit){
+// =====================
+// SRS 取词
+// =====================
+function getDue(unit){
 let db=getDB();
 let list=[];
 
@@ -125,7 +146,11 @@ list.push(db[k]);
 }
 }
 
-return list.length?list:data[unit].map(w=>({word:w[0],meaning:w[1],level:0,key:unit+"_"+w[0]}));
+if(list.length===0){
+return data[unit].map(w=>({word:w[0],meaning:w[1]}));
+}
+
+return list;
 }
 
 // =====================
@@ -134,6 +159,18 @@ return list.length?list:data[unit].map(w=>({word:w[0],meaning:w[1],level:0,key:u
 let currentUnit="Welcome";
 let currentWord=null;
 let showBack=false;
+let wrong=[];
+
+// =====================
+// 学生切换
+// =====================
+function setStudent(){
+student=document.getElementById("stu").value;
+localStorage.setItem("student",student);
+alert("当前学生："+student);
+initDB();
+nextCard();
+}
 
 // =====================
 // 菜单
@@ -152,20 +189,20 @@ nextCard();
 }
 
 // =====================
-// 发音
+// 发音（Azure已接入则保留你v4的函数）
 // =====================
 function speak(word){
-let s=new SpeechSynthesisUtterance(word);
-s.lang="en-US";
-speechSynthesis.speak(s);
+let u=new SpeechSynthesisUtterance(word);
+u.lang="en-US";
+speechSynthesis.speak(u);
 }
 
 // =====================
-// 卡片模式（核心）
+// 卡片
 // =====================
 function nextCard(){
 
-let list=getDueWords(currentUnit);
+let list=getDue(currentUnit);
 currentWord=list[Math.floor(Math.random()*list.length)];
 showBack=false;
 
@@ -178,7 +215,7 @@ ${currentWord.word}
 
 <br><br>
 
-<input id="inp" placeholder="输入中文或英文">
+<input id="inp" placeholder="输入英文或中文">
 <button onclick="check()">提交</button>
 
 <br><br>
@@ -194,21 +231,21 @@ showBack?currentWord.meaning:currentWord.word;
 }
 
 // =====================
-// SRS更新算法（核心）
+// 更新记忆
 // =====================
-function updateMemory(correct){
-
+function updateMemory(ok){
 let db=getDB();
 let key=currentUnit+"_"+currentWord.word;
 
 if(!db[key]) return;
 
-if(correct){
+if(ok){
 db[key].level++;
 db[key].next=Date.now()+Math.pow(2,db[key].level)*60000;
 }else{
 db[key].level=0;
 db[key].next=Date.now()+60000;
+wrong.push(currentWord);
 }
 
 saveDB(db);
@@ -218,22 +255,47 @@ saveDB(db);
 // 判断
 // =====================
 function check(){
-
-let val=document.getElementById("inp").value.trim();
+let v=document.getElementById("inp").value.trim();
 
 let ok =
-val.toLowerCase()===currentWord.word.toLowerCase() ||
-val===currentWord.meaning;
+v.toLowerCase()===currentWord.word.toLowerCase() ||
+v===currentWord.meaning;
 
-if(ok){
-updateMemory(true);
-alert("✔ 正确");
-}else{
-updateMemory(false);
-alert("❌ 错误："+currentWord.word+" / "+currentWord.meaning);
-}
+updateMemory(ok);
+
+alert(ok?"✔ 正确":"❌ 错误");
 
 nextCard();
+}
+
+// =====================
+// 错题本
+// =====================
+function showWrong(){
+let html="<h3>错题本</h3>";
+wrong.forEach(w=>{
+html+=w.word+" - "+w.meaning+"<br>";
+});
+document.getElementById("app").innerHTML=html;
+}
+
+// =====================
+// 教师统计
+// =====================
+function showStats(){
+let db=getDB();
+let total=0, mastered=0;
+
+for(let k in db){
+total++;
+if(db[k].level>=2) mastered++;
+}
+
+document.getElementById("app").innerHTML=`
+<h3>学习统计（${student}）</h3>
+<p>总词汇：${total}</p>
+<p>已掌握：${mastered}</p>
+`;
 }
 
 // =====================
