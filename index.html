@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Think Level 0 Smart Vocabulary System v2.0</title>
+<title>Think Level 0 v3.0 Memory System</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ text-align:center;
 }
 
 .container{
-max-width:750px;
+max-width:800px;
 margin:auto;
 background:white;
 padding:20px;
@@ -24,23 +24,25 @@ button{
 padding:8px 12px;
 margin:5px;
 border-radius:8px;
-cursor:pointer;
 border:1px solid #ccc;
 background:#fff;
+cursor:pointer;
 }
 
 .card{
-font-size:26px;
-padding:40px;
+font-size:28px;
+padding:50px;
 margin:20px;
 background:#f8f8f8;
 border-radius:12px;
 cursor:pointer;
+user-select:none;
 }
 
-.small{
-font-size:14px;
-color:#666;
+input{
+padding:10px;
+width:70%;
+font-size:16px;
 }
 </style>
 </head>
@@ -49,13 +51,10 @@ color:#666;
 
 <div class="container">
 
-<h2>Think Level 0 Vocabulary v2.0</h2>
+<h2>Think Level 0 v3.0 Memory System</h2>
 
 <div id="menu"></div>
-
 <hr>
-
-<div id="mode"></div>
 
 <div id="app"></div>
 
@@ -67,44 +66,74 @@ color:#666;
 // 词库
 // =====================
 const data = {
-
 Welcome:[
 ["black","黑色"],["blue","蓝色"],["red","红色"],["green","绿色"],
-["morning","早上"],["afternoon","下午"],["night","夜晚"],
-["book","书"],["pen","钢笔"]
+["morning","早上"],["book","书"],["pen","钢笔"]
 ],
-
 Unit1:[
 ["Brazil","巴西"],["Japan","日本"],["China","中国"],
 ["teacher","老师"],["student","学生"],
-["who","谁"],["what","什么"],
 ["mountain","山"],["sea","海"]
 ],
-
 Unit2:[],Unit3:[],Unit4:[],Unit5:[],
 Unit6:[],Unit7:[],Unit8:[],Unit9:[],
 Unit10:[],Unit11:[],Unit12:[]
 };
 
 // =====================
+// SRS 记忆系统（简化版）
+// =====================
+
+function getDB(){
+let db=localStorage.getItem("vocab_v3");
+return db?JSON.parse(db):{};
+}
+
+function saveDB(db){
+localStorage.setItem("vocab_v3",JSON.stringify(db));
+}
+
+// 初始化单词
+function initDB(){
+let db=getDB();
+
+for(let unit in data){
+data[unit].forEach(w=>{
+let key=unit+"_"+w[0];
+if(!db[key]){
+db[key]={
+word:w[0],
+meaning:w[1],
+level:0,
+next:Date.now()
+};
+}
+});
+}
+
+saveDB(db);
+}
+
+// 获取可学习单词（间隔复习）
+function getDueWords(unit){
+let db=getDB();
+let list=[];
+
+for(let k in db){
+if(k.startsWith(unit+"_") && db[k].next<=Date.now()){
+list.push(db[k]);
+}
+}
+
+return list.length?list:data[unit].map(w=>({word:w[0],meaning:w[1],level:0,key:unit+"_"+w[0]}));
+}
+
+// =====================
 // 状态
 // =====================
 let currentUnit="Welcome";
-let mode="flashcard";
-let index=0;
-let wrong=[];
-let correct=0;
-let total=0;
-let records=[];
-
-// =====================
-// 初始化
-// =====================
-function init(){
-renderMenu();
-renderMode();
-loadCard();
-}
+let currentWord=null;
+let showBack=false;
 
 // =====================
 // 菜单
@@ -117,145 +146,102 @@ html+=`<button onclick="switchUnit('${u}')">${u}</button>`;
 document.getElementById("menu").innerHTML=html;
 }
 
-// =====================
-function renderMode(){
-document.getElementById("mode").innerHTML=`
-<button onclick="setMode('flashcard')">卡片模式</button>
-<button onclick="setMode('en2cn')">英→中</button>
-<button onclick="setMode('cn2en')">中→英</button>
-<button onclick="setMode('test')">测试模式</button>
-`;
-}
-
-function setMode(m){
-mode=m;
-index=0;
-correct=0;
-total=0;
-loadCard();
-}
-
-// =====================
 function switchUnit(u){
 currentUnit=u;
-index=0;
-correct=0;
-total=0;
-loadCard();
+nextCard();
 }
 
 // =====================
 // 发音
 // =====================
 function speak(word){
-let u=new SpeechSynthesisUtterance(word);
-u.lang="en-US";
-speechSynthesis.speak(u);
+let s=new SpeechSynthesisUtterance(word);
+s.lang="en-US";
+speechSynthesis.speak(s);
 }
 
 // =====================
-// 卡片模式
+// 卡片模式（核心）
 // =====================
-function loadCard(){
+function nextCard(){
 
-let list=data[currentUnit];
+let list=getDueWords(currentUnit);
+currentWord=list[Math.floor(Math.random()*list.length)];
+showBack=false;
 
-if(!list || list.length===0){
-document.getElementById("app").innerHTML="<h3>该单元未开放</h3>";
-return;
-}
-
-let word=list[index % list.length];
-
-if(mode==="flashcard"){
 document.getElementById("app").innerHTML=`
-<div class="card" onclick="flip('${word[0]}','${word[1]}')">
-点击翻转
+<div class="card" onclick="flip()">
+${currentWord.word}
 </div>
-<p class="small">Unit: ${currentUnit}</p>
+
+<button onclick="speak('${currentWord.word}')">🔊 发音</button>
+
+<br><br>
+
+<input id="inp" placeholder="输入中文或英文">
+<button onclick="check()">提交</button>
+
+<br><br>
+
+<button onclick="nextCard()">下一张</button>
 `;
-
-window.currentWord=word;
 }
 
-else if(mode==="cn2en"){
-document.getElementById("app").innerHTML=`
-<h3>${word[1]}</h3>
-<input id="inp">
-<button onclick="check('${word[0]}')">提交</button>
-<button onclick="speak('${word[0]}')">🔊</button>
-`;
-window.currentWord=word;
-}
-
-else if(mode==="en2cn"){
-document.getElementById("app").innerHTML=`
-<h3>${word[0]}</h3>
-<input id="inp">
-<button onclick="check('${word[1]}')">提交</button>
-`;
-window.currentWord=word;
-}
-
-else if(mode==="test"){
-document.getElementById("app").innerHTML=`
-<h3>${word[1]}</h3>
-<input id="inp">
-<button onclick="testCheck('${word[0]}')">提交</button>
-`;
-window.currentWord=word;
-}
-}
-
-// =====================
-function flip(en,cn){
+function flip(){
+showBack=!showBack;
 document.querySelector(".card").innerHTML=
-en+"<br>"+cn;
-speak(en);
+showBack?currentWord.meaning:currentWord.word;
 }
 
 // =====================
-function check(ans){
-let v=document.getElementById("inp").value;
-total++;
-if(v.toLowerCase()===ans.toLowerCase()){
-correct++;
+// SRS更新算法（核心）
+// =====================
+function updateMemory(correct){
+
+let db=getDB();
+let key=currentUnit+"_"+currentWord.word;
+
+if(!db[key]) return;
+
+if(correct){
+db[key].level++;
+db[key].next=Date.now()+Math.pow(2,db[key].level)*60000;
 }else{
-wrong.push(window.currentWord);
+db[key].level=0;
+db[key].next=Date.now()+60000;
 }
-index++;
-loadCard();
+
+saveDB(db);
 }
 
 // =====================
-function testCheck(ans){
-let v=document.getElementById("inp").value;
-total++;
-if(v.toLowerCase()===ans.toLowerCase()){
-correct++;
+// 判断
+// =====================
+function check(){
+
+let val=document.getElementById("inp").value.trim();
+
+let ok =
+val.toLowerCase()===currentWord.word.toLowerCase() ||
+val===currentWord.meaning;
+
+if(ok){
+updateMemory(true);
+alert("✔ 正确");
 }else{
-wrong.push(window.currentWord);
-}
-records.push({unit:currentUnit,mode:mode});
-index++;
-loadCard();
+updateMemory(false);
+alert("❌ 错误："+currentWord.word+" / "+currentWord.meaning);
 }
 
-// =====================
-// 错题本
-// =====================
-function showWrong(){
-let html="<h3>错题本</h3>";
-wrong.forEach(w=>{
-html+=w[0]+" - "+w[1]+"<br>";
-});
-document.getElementById("app").innerHTML=html;
+nextCard();
 }
 
 // =====================
 // 初始化
 // =====================
-init();
+initDB();
+renderMenu();
+nextCard();
 
 </script>
 
